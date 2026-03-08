@@ -1,6 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Users.DAL.Models;
+using System.Globalization;
 
 namespace Users.DAL
 {
@@ -11,6 +10,7 @@ namespace Users.DAL
         public InMemoryUserRepository()
         {
             var nowMadagascar = GetMadagascarNow();
+
             _users = new List<User> {
             new User {
                 Id = Guid.NewGuid(),
@@ -51,7 +51,7 @@ namespace Users.DAL
                     new Address { Id = 2, Name = "homeaddress", Street = "street No. 2", CountryCode = "AU" }
                 }
             },
-            // user4, user5 similares...
+            // user4, user5 similares... Puesto que es en memoria el almacenamiento.
         };
         }
 
@@ -62,35 +62,24 @@ namespace Users.DAL
             return madagascarNow.ToString("dd-MM-yyyy HH:mm");
         }
 
-        // Implementaciones simples de GetAll, Add, Update, Delete...
-        public void Add(User user)
+        public List<User> GetAll() => _users.ToList();
+
+        public User? GetById(Guid id) => _users.FirstOrDefault(u => u.Id == id);
+
+        public User? GetByTaxId(string taxId) => _users.FirstOrDefault(u => u.TaxId.Equals(taxId, StringComparison.OrdinalIgnoreCase));
+
+        public void Add(User user) => _users.Add(user);
+        
+        public void Update(User user)
         {
-            throw new NotImplementedException();
+            var index = _users.FindIndex(u => u.Id == user.Id);
+            if (index >= 0) _users[index] = user;
         }
 
         public void Delete(Guid id)
         {
-            throw new NotImplementedException();
+            _users.RemoveAll(u => u.Id == id);
         }
 
-        public List<User> GetAll()
-        {
-            throw new NotImplementedException();
-        }
-
-        public User? GetById(Guid id)
-        {
-            throw new NotImplementedException();
-        }
-
-        public User? GetByTaxId(string taxId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Update(User user)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

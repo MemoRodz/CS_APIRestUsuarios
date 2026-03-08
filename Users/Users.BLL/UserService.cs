@@ -1,7 +1,9 @@
-﻿using System.Security.Cryptography;
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography;
 using Users.DAL;
+using Users.DAL.Models;
+using Users.BLL;
 
 namespace Users.BLL
 {
@@ -68,7 +70,7 @@ namespace Users.BLL
             };
         }
 
-        public User CreateUser(User user)
+        public User PostUser(User user)
         {
             // Validar tax_id único
             if (_repo.GetByTaxId(user.TaxId) is not null)
@@ -78,6 +80,9 @@ namespace Users.BLL
             if (!Regex.IsMatch(user.TaxId, @"^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$"))
                 throw new ArgumentException("tax_id debe tener formato RFC");
 
+            if (!string.IsNullOrEmpty(user.Phone))
+                user.Phone = Regex.Replace(user.Phone, @"[\s\-\(\)]", "");
+
             // Validar teléfono (10 dígitos, opcional código país; AndresFormat = regla que definas)
             if (!Regex.IsMatch(user.Phone, @"^\+?\d{10,15}$"))
                 throw new ArgumentException("phone inválido");
@@ -85,7 +90,8 @@ namespace Users.BLL
             // Fecha actual Madagascar
             user.Id = Guid.NewGuid();
             user.CreatedAt = InMemoryUserRepository.GetMadagascarNow(); // o método auxiliar
-            user.Password = AesEncrypt(user.Password); // AES256
+            if (!string.IsNullOrEmpty(user.Password))
+                user.Password = AesEncrypt(user.Password); // AES256
 
             _repo.Add(user);
 
@@ -95,8 +101,38 @@ namespace Users.BLL
 
         public User PatchUser(Guid id, Dictionary<string, object> changes)
         {
-            var user = _repo.GetById(id) ?? throw new KeyNotFoundException();
-            // aplica cambios, revalida tax_id/phone y re-encripta password si viene
+            var user = _repo.GetById(id) ?? throw new KeyNotFoundException("Usuario no encontrado");
+            foreach (var kv in changes)
+            {
+                var key = kv.Key.ToLower();
+                var val = kv.Value?.ToString();
+
+                if (val == null) continue;
+
+                switch (key)
+                {
+                    case "email":
+                        user.Email = val;
+                        break;
+                    case "name":
+                        user.Name = val;
+                        break;
+                    case "phone":
+                        user.Phone = val;
+                        // revalidar si quieres
+                        break;
+                    case Constantes.Campos.Usuario.TaxId:
+                        if (!user.TaxId.Equals(val, StringComparison.OrdinalIgnoreCase)
+                            && _repo.GetByTaxId(val) is not null)
+                            throw new InvalidOperationException("tax_id debe ser único");
+                        user.TaxId = val;
+                        break;
+                    case Constantes.Campos.Usuario.Clave:
+                        user.Password = AesEncrypt(val);
+                        break;
+                        // TODO: addresses se podría mapear desde JSON a List<Address> en el controlador
+                }
+            }
             _repo.Update(user);
             user.Password = null!;
             return user;
@@ -107,13 +143,29 @@ namespace Users.BLL
         public bool Login(string taxId, string plainPassword)
         {
             var user = _repo.GetByTaxId(taxId);
-            if (user == null) return false;
-            var encrypted = AesEncrypt(plainPassword);
-            return encrypted == user.Password;
+            if (user == null || string.IsNullOrEmpty(user.Password)) return false;
+            try
+            {
+                string decrypted = AesDecrypt(user.Password);
+                return decrypted == plainPassword;
+            }
+            catch 
+            {
+                return false;
+            }
+
+            //var encrypted = AesEncrypt(plainPassword);
+            //return encrypted == user.Password;
         }
 
-        // AES256 usando System.Security.Cryptography
-        private static readonly byte[] Key = Encoding.UTF8.GetBytes("MiClaveSecreta32Bytes123456789012"); // 32 bytes
+    
+        private static byte[] Key(string password)
+        {
+            using var sha256 = SHA256.Create();
+            return sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+
+        }
+
 
         private static string AesEncrypt(string plainText)
         {
@@ -122,7 +174,7 @@ namespace Users.BLL
             aes.BlockSize = 128;
             aes.Mode = CipherMode.CBC;
             aes.Padding = PaddingMode.PKCS7;
-            aes.Key = Key;
+            aes.Key = Key(Constantes.Seguridad.Semilla);
             aes.GenerateIV();
             using var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
             var plainBytes = Encoding.UTF8.GetBytes(plainText);
@@ -130,6 +182,20 @@ namespace Users.BLL
             // guarda IV + cipher en base64
             var result = Convert.ToBase64String(aes.IV.Concat(cipherBytes).ToArray());
             return result;
+        }
+
+        private static string AesDecrypt(string cipherTextWithIv)
+        {
+            var fullCipher = Convert.FromBase64String(cipherTextWithIv);
+            using var aes = Aes.Create();
+            aes.Key = Key(Constantes.Seguridad.Semilla);
+
+            var iv = fullCipher.Take(16).ToArray();
+            var cipherBytes = fullCipher.Skip(16).ToArray();
+
+            using var decryptor = aes.CreateDecryptor(aes.Key, iv);
+            var plainBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
+            return Encoding.UTF8.GetString(plainBytes);
         }
     }
 }

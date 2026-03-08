@@ -1,6 +1,6 @@
-@Users_HostAddress = http://localhost:5124
+@Users_HostAddress = https://localhost:7124
 
-GET {{Users_HostAddress}}/weatherforecast/
+GET {{Users_HostAddress}}/users
 Accept: application/json
 
 ###
