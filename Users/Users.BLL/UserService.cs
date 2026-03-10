@@ -40,8 +40,6 @@ namespace Users.BLL
             }
 
             // Limpia password antes de regresar a la API
-            //foreach (var u in users) u.Password = null!;
-            //return users;
             return users.Select(u => new User
             {
                 Id = u.Id,
@@ -100,39 +98,42 @@ namespace Users.BLL
             };
         }
 
-        public User PostUser(User user)
+        public User PostUser(User newUser)
         {
-            Console.WriteLine($"\nPostUser...\nValidando TaxId: {user.TaxId}");
             // Validar tax_id único
-            if (_repo.GetByTaxId(user.TaxId) is not null)
+            if (_repo.GetByTaxId(newUser.TaxId) is not null)
                 throw new InvalidOperationException("tax_id debe ser único");
-            Console.WriteLine($"Validando RFC Formato: {user.TaxId}");
             // Validar RFC (regex simplificada)
-            if (!Regex.IsMatch(user.TaxId, @"^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$"))
+            if (!Regex.IsMatch(newUser.TaxId, @"^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$"))
                 throw new ArgumentException("tax_id debe tener formato RFC");
-            Console.WriteLine($"Validando Phone: {user.Phone}");
-            if (!string.IsNullOrEmpty(user.Phone))
-                user.Phone = Regex.Replace(user.Phone, @"[\s\-\(\)]", "");
-            Console.WriteLine($"Validando Formato Phone: {user.Phone}");
-            // Validar teléfono (10 dígitos, opcional código país; AndresFormat = regla que definas)
-            if (!Regex.IsMatch(user.Phone, @"^\+?\d{10,15}$"))
+            if (!string.IsNullOrEmpty(newUser.Phone))
+                newUser.Phone = Regex.Replace(newUser.Phone, @"[\s\-\(\)]", "");
+            // Validar teléfono (10 dígitos, opcional código país; AndresFormat = regla por definr)
+            if (!Regex.IsMatch(newUser.Phone, @"^\+?\d{10,15}$"))
                 throw new ArgumentException("phone inválido");
             // Fecha actual Madagascar
-            user.Id = Guid.NewGuid();
-            Console.WriteLine($"Creando Usuario Id: {user.Id}");
-            user.CreatedAt = InMemoryUserRepository.GetMadagascarNow(); // o método auxiliar
-            Console.WriteLine($"PostUser\nAcceso antes: {user.Password}\n\tSemilla: {Constantes.Seguridad.Semilla}");
-            if (!string.IsNullOrEmpty(user.Password))
-                user.Password = AesEncrypt(user.Password); // AES256
-            Console.WriteLine($"PostUser\nAcceso encriptado: {user.Password}");
-            _repo.Add(user);
-
-            return user;
+            newUser.Id = Guid.NewGuid();
+            newUser.CreatedAt = InMemoryUserRepository.GetMadagascarNow(); // o método auxiliar
+            if (!string.IsNullOrEmpty(newUser.Password))
+                newUser.Password = AesEncrypt(newUser.Password); // AES256
+            _repo.Add(newUser);
+            Console.WriteLine($"PostUser");
+            return new User
+            {
+                Id = newUser.Id,
+                Email = newUser.Email,
+                Name = newUser.Name,
+                Phone = newUser.Phone,
+                TaxId = newUser.TaxId,
+                CreatedAt = newUser.CreatedAt,
+                Addresses = newUser.Addresses,
+                Password = null // El nuevo usuario en el repo sigue teniendo su hash
+            };
         }
 
         public User PatchUser(Guid id, Dictionary<string, object> changes)
         {
-            var user = _repo.GetById(id) ?? throw new KeyNotFoundException("Usuario no encontrado");
+            var patchUser = _repo.GetById(id) ?? throw new KeyNotFoundException("Usuario no encontrado");
             foreach (var kv in changes)
             {
                 var key = kv.Key.ToLower();
@@ -143,44 +144,50 @@ namespace Users.BLL
                 switch (key)
                 {
                     case Constantes.Campos.Usuario.Email:
-                        user.Email = val;
+                        patchUser.Email = val;
                         break;
                     case Constantes.Campos.Usuario.Nombre:
-                        user.Name = val;
+                        patchUser.Name = val;
                         break;
                     case Constantes.Campos.Usuario.Telefono:
-                        user.Phone = val;
+                        patchUser.Phone = val;
                         //  TODO: revalidar de ser necesario
                         break;
                     case Constantes.Campos.Usuario.TaxId:
-                        if (!user.TaxId.Equals(val, StringComparison.OrdinalIgnoreCase)
+                        if (!patchUser.TaxId.Equals(val, StringComparison.OrdinalIgnoreCase)
                             && _repo.GetByTaxId(val) is not null)
                             throw new InvalidOperationException("tax_id debe ser único");
-                        user.TaxId = val;
+                        patchUser.TaxId = val;
                         break;
                     case Constantes.Campos.Usuario.Clave:
-                        user.Password = AesEncrypt(val);
-                        Console.WriteLine($"PatchUser:\n\tAcceso encriptado:{user.Password}");
+                        patchUser.Password = AesEncrypt(val);
                         break;
-                        // TODO: addresses se podría mapear desde JSON a List<Address> en el controlador
                 }
             }
-            _repo.Update(user);
-            return user;
+            _repo.Update(patchUser);
+            Console.WriteLine($"PatchUser");
+            return new User
+            {
+                Id = patchUser.Id,
+                Email = patchUser.Email,
+                Name = patchUser.Name,
+                Phone = patchUser.Phone,
+                TaxId = patchUser.TaxId,
+                CreatedAt = patchUser.CreatedAt,
+                Addresses = patchUser.Addresses,
+                Password = null     // El usuario actualizado en el repo sigue teniendo su hash
+            };
         }
 
         public void DeleteUser(Guid id) => _repo.Delete(id);
 
         public bool Login(string taxId, string plainPassword)
         {
-            Console.WriteLine($"LoginService:\n\tTax: {taxId},\n\tClave:{plainPassword}");
             var user = _repo.GetByTaxId(taxId);
-            Console.WriteLine($"LoginService:\n\tuser: {user?.TaxId},\n\tClave:{plainPassword}");
             if (user == null || string.IsNullOrEmpty(user.Password)) return false;
             try
             {
                 string decrypted = AesDecrypt(user.Password);
-                Console.WriteLine($"LoginService:\n\tdesencritado:{decrypted}");
                 return decrypted == plainPassword;
             }
             catch (Exception ex)
@@ -194,7 +201,6 @@ namespace Users.BLL
 
         private static byte[] Key(string password)
         {
-            Console.WriteLine($"KeyService:\n\tClave: {password}");
             using var sha256 = SHA256.Create();
             return sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
 
@@ -202,7 +208,6 @@ namespace Users.BLL
 
         internal static string AesEncrypt(string plainText)
         {
-            Console.WriteLine($"EncriptadoService:\n\tEntrada: {plainText}");
             using var aes = Aes.Create();
             aes.KeySize = 256;
             aes.BlockSize = 128;
@@ -215,13 +220,11 @@ namespace Users.BLL
             var cipherBytes = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
             // guarda IV + cipher en base64
             var result = Convert.ToBase64String(aes.IV.Concat(cipherBytes).ToArray());
-            Console.WriteLine($"EncriptadoService:\n\tSalida: {result}");
             return result;
         }
 
         internal static string AesDecrypt(string cipherTextWithIv)
         {
-            Console.WriteLine($"DesencriptadoService:\n\tEntrada: {cipherTextWithIv}");
             var fullCipher = Convert.FromBase64String(cipherTextWithIv);
             using var aes = Aes.Create();
             // IMPORTANTE: Mantener la misma configuración que en Encrypt
@@ -234,7 +237,6 @@ namespace Users.BLL
 
             using var decryptor = aes.CreateDecryptor(aes.Key, iv);
             var plainBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
-            Console.WriteLine($"DesencriptadoService:\n\tSalida: {Encoding.UTF8.GetString(plainBytes)}");
             return Encoding.UTF8.GetString(plainBytes);
         }
     }
