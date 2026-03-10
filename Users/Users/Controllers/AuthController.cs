@@ -23,7 +23,7 @@ namespace Users.Controllers
             //    return Ok(new { success = true, message = "Login correcto" });
             //return Unauthorized(new { success = false, message = "Credenciales inválidas" });
             var ok = _service.Login(dto.TaxId, dto.Password);
-
+            Console.WriteLine($"LoginAction:\n\tResultado Login: {ok}");
             if (!ok)
                 return Unauthorized(new { success = false, message = "Credenciales inválidas" });
 

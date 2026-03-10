@@ -5,6 +5,9 @@ using Users.DAL;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ASIGNACIÓN: Leemos del appsettings y se asigna a la clase de Constantes
+Constantes.Seguridad.Semilla = builder.Configuration["Seguridad:Semilla"]
+                               ?? throw new Exception("Falta la Semilla en appsettings.json");
 // Controllers
 builder.Services.AddControllers(options => 
 {

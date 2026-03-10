@@ -9,16 +9,19 @@ namespace Users.BLL
     {
         public static class Seguridad
         {
-            public const string Semilla = "miClaveSecreta32bytes123";
+            // Se cambia de 'const' por 'static' para llenarlo al arrancar
+            public static string Semilla { get; set; } = string.Empty;
         }
 
         public static class Campos
         {
             public static class Usuario
             {
-                public const string TaxId = "tax_id";
-                public const string Email = "email";
                 public const string Clave = "password";
+                public const string Email = "email";
+                public const string Nombre = "name";
+                public const string TaxId = "tax_id";
+                public const string Telefono = "Phone";
             }
         }
     }

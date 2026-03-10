@@ -6,7 +6,6 @@ namespace Users.DAL
     public class InMemoryUserRepository : IUserRepository
     {
         private readonly List<User> _users;
-
         public InMemoryUserRepository()
         {
             var nowMadagascar = GetMadagascarNow();
@@ -54,32 +53,37 @@ namespace Users.DAL
             // user4, user5 similares... Puesto que es en memoria el almacenamiento.
         };
         }
-
         public static string GetMadagascarNow()
         {
             var tz = TimeZoneInfo.FindSystemTimeZoneById("E. Africa Standard Time"); // Madagascar ~ UTC+3
             var madagascarNow = TimeZoneInfo.ConvertTime(DateTime.UtcNow, tz);
             return madagascarNow.ToString("dd-MM-yyyy HH:mm");
         }
-
         public List<User> GetAll() => _users.ToList();
-
-        public User? GetById(Guid id) => _users.FirstOrDefault(u => u.Id == id);
-
-        public User? GetByTaxId(string taxId) => _users.FirstOrDefault(u => u.TaxId.Equals(taxId, StringComparison.OrdinalIgnoreCase));
-
+        public User? GetById(Guid id)
+        {
+            Console.WriteLine($"Id:{id}");
+            User userIn = _users.FirstOrDefault(u => u.Id == id);
+            Console.WriteLine($"Usuario obtenido: {userIn?.Id}");
+            return userIn;
+        }
+        public User? GetByTaxId(string taxId)
+        {
+            Console.WriteLine($"TaxId:{taxId}");
+            User userIn = _users.FirstOrDefault(u => u.TaxId.Equals(taxId, StringComparison.OrdinalIgnoreCase));
+            Console.WriteLine($"Usuario obtenido: {userIn?.Id}");
+            if (userIn == null) return null;
+            return userIn;
+        }
         public void Add(User user) => _users.Add(user);
-        
         public void Update(User user)
         {
             var index = _users.FindIndex(u => u.Id == user.Id);
             if (index >= 0) _users[index] = user;
         }
-
         public void Delete(Guid id)
         {
             _users.RemoveAll(u => u.Id == id);
         }
-
     }
 }
