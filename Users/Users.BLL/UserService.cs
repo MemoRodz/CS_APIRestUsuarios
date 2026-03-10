@@ -200,7 +200,7 @@ namespace Users.BLL
 
         }
 
-        private static string AesEncrypt(string plainText)
+        internal static string AesEncrypt(string plainText)
         {
             Console.WriteLine($"EncriptadoService:\n\tEntrada: {plainText}");
             using var aes = Aes.Create();
@@ -219,7 +219,7 @@ namespace Users.BLL
             return result;
         }
 
-        private static string AesDecrypt(string cipherTextWithIv)
+        internal static string AesDecrypt(string cipherTextWithIv)
         {
             Console.WriteLine($"DesencriptadoService:\n\tEntrada: {cipherTextWithIv}");
             var fullCipher = Convert.FromBase64String(cipherTextWithIv);

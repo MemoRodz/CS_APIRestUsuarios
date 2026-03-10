@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="Users.BLL/Users.BLL.csproj" />
   <Project Path="Users.DAL/Users.DAL.csproj" />
+  <Project Path="Users.Tests/Users.Tests.csproj" Id="aa4656fb-8629-40b2-9eee-c854e3659420" />
   <Project Path="Users/Users.API.csproj" />
 </Solution>
