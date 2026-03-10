@@ -26,9 +26,11 @@ El objetivo del proyecto es ofrecer una estructura limpia, escalable y mantenibl
 
 ## 👨‍💻 Sobre mí
 **Full Stack Developer** con más de 3 años de experiencia como Jefe de Unidad Departamental de Programación y Sistemas. Especializado en la gestión de equipos y desarrollo de soluciones con ASP Clásico. Con conocimientos sólidos en desarrollo Desktop y Web bajo el ecosistema de Visual Studio. Enfocado en resultados y coordinación de equipos de desarrollo.
-
 <br/>  
 *Nivel de inglés: Intermedio.*
+
+## 📄 Licencia
+   Este proyecto y su código está bajo la licencia MIT. Para producción se deberá apegarse a las condiciones de uso de **Microsoft** y licencias adjuntas.
 
 ## 🤝 Contribuciones
    ¡Las contribuciones son bienvenidas! Por favor, haz un fork del repositorio y envía un pull request con tus mejoras.
@@ -41,7 +43,6 @@ El objetivo del proyecto es ofrecer una estructura limpia, escalable y mantenibl
                 />
             </a></div>
 <br />   
-## 📄 Licencia
-   Este proyecto y su código está bajo la licencia MIT. Para producción se deberá apegarse a las condiciones de uso de **Microsoft** y licencias adjuntas.
+
    
    
